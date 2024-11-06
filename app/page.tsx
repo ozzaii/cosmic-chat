@@ -1,6 +1,7 @@
-'use client'
+'use client';
+
 import { useState, useEffect } from 'react';
-import { supabase } from './supabase';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -36,53 +37,11 @@ export default function AuthPage() {
   async function checkUser() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return;
+      if (session) {
+        router.push('/chat');
       }
-
-      console.log('Current session user:', session.user.email);
-
-      // Check if profile exists
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id);
-
-      if (profileError) throw profileError;
-
-      // If no profile exists, create one
-      if (!profile || profile.length === 0) {
-        const { error: createProfileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: session.user.id,
-              email: session.user.email,
-              username: session.user.email?.split('@')[0] || 'user',
-            }
-          ]);
-
-        if (createProfileError) throw createProfileError;
-
-        // Fetch the newly created profile
-        const { data: newProfile, error: newProfileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (newProfileError) throw newProfileError;
-        
-        console.log('Setting current user:', newProfile);
-        setCurrentUser(newProfile);
-      } else {
-        console.log('Setting current user:', profile);
-      }
-
-      router.push('/chat');
     } catch (error) {
       console.error('Error checking user:', error);
-      // Don't redirect on error, just log it
       setError('Error loading profile. Please try again.');
     }
   }
@@ -101,8 +60,7 @@ export default function AuthPage() {
         
         if (error) throw error;
         if (data.user) {
-          console.log('Logged in as:', data.user.email);
-          await checkUser(); // Check and create profile if needed
+          router.push('/chat');
         }
       } else {
         const { data: { user }, error: signUpError } = await supabase.auth.signUp({
@@ -118,18 +76,6 @@ export default function AuthPage() {
         if (signUpError) throw signUpError;
 
         if (user) {
-          // Create profile immediately after signup
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                id: user.id,
-                username: formData.username,
-                email: formData.email,
-              }
-            ]);
-
-          if (profileError) throw profileError;
           setError('Success! Please check your email to confirm your account.');
         }
       }
